@@ -1,5 +1,7 @@
 // cpp_jq - SPDX-License-Identifier: MIT
 #pragma once
+#include <iosfwd>
+#include "cpp_jq/error.hpp"
 namespace cpp_jq {
-// populated in Phase 3
+void print_diag(std::ostream& os, const Pos& p, const std::string& msg);
 }
