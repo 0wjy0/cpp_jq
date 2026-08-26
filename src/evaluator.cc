@@ -122,8 +122,7 @@ void ArrayCtor::eval(const J&, Values& out) const {
     J arr = J::array();
     for (auto& it : items) {
         Values tmp = it->eval(J(nullptr));
-        if (tmp.size() != 1) throw CppJqError({}, "array element must be single");
-        arr.push_back(tmp[0]);
+        for (auto& v : tmp) arr.push_back(v);
     }
     out.push_back(arr);
 }
@@ -133,11 +132,11 @@ void ObjectCtor::eval(const J&, Values& out) const {
     for (auto& [k, v] : pairs) {
         Values kt = k->eval(J(nullptr));
         Values vt = v->eval(J(nullptr));
-        if (kt.size() != 1 || vt.size() != 1) throw CppJqError({}, "object k/v must be single");
+        if (kt.size() != 1) throw CppJqError({}, "object key must be single");
         std::string key = kt[0].is_string()
             ? kt[0].get<std::string>()
             : kt[0].dump();
-        obj[key] = vt[0];
+        for (auto& val : vt) obj[key] = val;
     }
     out.push_back(obj);
 }

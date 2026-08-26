@@ -165,16 +165,6 @@ NodePtr parse_cmp() {
                 base = wrap(new_access);
                 continue;
             }
-            if (peek().kind == TokKind::RBRACKET) {
-                eat();
-                bool opt = false;
-                if (accept(TokKind::QUESTION)) opt = true;
-                Iterate it;
-                it.optional = opt;
-                NodePtr new_access = std::make_shared<Node>(Node{it, base->pos});
-                base = wrap(new_access);
-                continue;
-            }
             if (peek().kind == TokKind::QUESTION) {
                 eat();
                 if (auto* fa = std::get_if<FieldAccess>(&base->kind)) fa->optional = true;
