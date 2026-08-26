@@ -155,11 +155,11 @@ void BinOp::eval(const J& in, Values& out) const {
         int c = 0;
         if (x.is_number() && y.is_number()) {
             double xd = x.get<double>(), yd = y.get<double>();
-            c = (xd < yd) - (xd > yd);
+            c = (xd > yd) - (xd < yd);
         } else if (x.is_string() && y.is_string()) {
             std::string xs = x.get<std::string>();
             std::string ys = y.get<std::string>();
-            c = (xs < ys) - (xs > ys);
+            c = (xs > ys) - (xs < ys);
         } else {
             throw CppJqError({}, "comparison: type mismatch");
         }
@@ -169,10 +169,45 @@ void BinOp::eval(const J& in, Values& out) const {
         else if (op == ">=") out.push_back(c >= 0);
         return;
     }
-    throw CppJqError({}, "BinOp: arithmetic not implemented in Phase 2");
+    auto numop = [&](auto f) {
+        if (!x.is_number() || !y.is_number()) throw CppJqError({}, "arithmetic on non-number");
+        out.push_back(f(x.get<double>(), y.get<double>()));
+    };
+    if (op == "+") {
+        if (x.is_string() && y.is_string()) { out.push_back(x.get<std::string>() + y.get<std::string>()); return; }
+        if (x.is_array()  && y.is_array())  { J r = x; for (auto& v : y) r.push_back(v); out.push_back(r); return; }
+        if (x.is_object() && y.is_object()) { J r = x; for (auto it = y.begin(); it != y.end(); ++it) r[it.key()] = it.value(); out.push_back(r); return; }
+        if (x.is_null() || y.is_null())    { out.push_back(J(nullptr)); return; }
+        numop([](double a, double b){ return a + b; });
+    } else if (op == "-") { numop([](double a, double b){ return a - b; }); }
+      else if (op == "*") {
+        if (x.is_string() && y.is_number()) {
+            std::string s; int64_t n = (int64_t)y.get<double>();
+            for (int64_t k = 0; k < std::abs(n); ++k) s += x.get<std::string>();
+            out.push_back(s); return;
+        }
+        numop([](double a, double b){ return a * b; });
+    } else if (op == "/") {
+        numop([](double a, double b){ if (b == 0) throw CppJqError({}, "division by zero"); return a / b; });
+    } else if (op == "%") {
+        numop([](double a, double b){ if (b == 0) throw CppJqError({}, "modulo by zero"); return std::fmod(a, b); });
+    } else {
+        throw CppJqError({}, "unknown binop: " + op);
+    }
 }
 
-void UnaryOp::eval(const J&, Values&) const { throw CppJqError({}, "UnaryOp: not implemented in Phase 2"); }
+void UnaryOp::eval(const J& in, Values& out) const {
+    Values v = inner->eval(in);
+    if (v.size() != 1) throw CppJqError({}, "unary op: not single");
+    if (op == "not") {
+        out.push_back(!v[0].is_boolean() ? false : !v[0].get<bool>());
+    } else if (op == "-") {
+        if (!v[0].is_number()) throw CppJqError({}, "negate: not number");
+        out.push_back(-v[0].get<double>());
+    } else {
+        throw CppJqError({}, "unknown unary: " + op);
+    }
+}
 
 void Call::eval(const J& in, Values& out) const {
     auto& reg = builtin_registry();

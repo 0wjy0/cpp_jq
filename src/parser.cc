@@ -17,41 +17,68 @@ struct Parser {
         return eat();
     }
 
-    NodePtr parse_expr() { return parse_cmp(); }
+    NodePtr parse_expr() {
+        NodePtr lhs = parse_cmp();
+        while (peek().kind == TokKind::AND || peek().kind == TokKind::OR) {
+            TokKind k = peek().kind; eat();
+            NodePtr rhs = parse_cmp();
+            NodePtr cond = lhs;
+            NodePtr t = (k == TokKind::AND) ? rhs : std::make_shared<Node>(Node{Literal{J(true)}, lhs->pos});
+            NodePtr e = (k == TokKind::AND) ? std::make_shared<Node>(Node{Literal{J(false)}, lhs->pos}) : rhs;
+            lhs = std::make_shared<Node>(Node{IfElse{cond, t, e}, lhs->pos});
+        }
+        return lhs;
+    }
 
 NodePtr parse_cmp() {
-    NodePtr lhs = parse_and();
+    NodePtr lhs = parse_arith();
     while (peek().kind == TokKind::EQ || peek().kind == TokKind::NEQ
            || peek().kind == TokKind::LT || peek().kind == TokKind::LE
            || peek().kind == TokKind::GT || peek().kind == TokKind::GE) {
         std::string op = eat().text;
-        NodePtr rhs = parse_and();
+        NodePtr rhs = parse_arith();
         Pos p = lhs->pos;
         lhs = std::make_shared<Node>(Node{BinOp{op, lhs, rhs}, p});
     }
     return lhs;
 }
 
-    NodePtr parse_and() {
-        NodePtr lhs = parse_pipe();
-        while (peek().kind == TokKind::AND || peek().kind == TokKind::OR) {
-            TokKind k = peek().kind; eat();
-            NodePtr rhs = parse_pipe();
+    NodePtr parse_arith() {
+        NodePtr lhs = parse_mul();
+        while (peek().kind == TokKind::PLUS || peek().kind == TokKind::MINUS) {
+            std::string op = eat().text;
+            NodePtr rhs = parse_mul();
             Pos p = lhs->pos;
-            NodePtr cond = lhs;
-            NodePtr t_node;
-            NodePtr e_node;
-            if (k == TokKind::AND) {
-                t_node = rhs;
-                e_node = std::make_shared<Node>(Node{Literal{J(false)}, p});
-            } else {
-                t_node = std::make_shared<Node>(Node{Literal{J(true)}, p});
-                e_node = rhs;
-            }
-            lhs = std::make_shared<Node>(Node{IfElse{cond, t_node, e_node}, p});
+            lhs = std::make_shared<Node>(Node{BinOp{op, lhs, rhs}, p});
         }
         return lhs;
     }
+
+    NodePtr parse_mul() {
+        NodePtr lhs = parse_unary();
+        while (peek().kind == TokKind::STAR || peek().kind == TokKind::SLASH || peek().kind == TokKind::PERCENT) {
+            std::string op = eat().text;
+            NodePtr rhs = parse_unary();
+            Pos p = lhs->pos;
+            lhs = std::make_shared<Node>(Node{BinOp{op, lhs, rhs}, p});
+        }
+        return lhs;
+    }
+
+    NodePtr parse_unary() {
+        Pos p = peek().pos;
+        if (accept(TokKind::MINUS)) {
+            NodePtr inner = parse_unary();
+            return std::make_shared<Node>(Node{UnaryOp{"-", inner}, p});
+        }
+        if (accept(TokKind::NOT)) {
+            NodePtr inner = parse_unary();
+            return std::make_shared<Node>(Node{UnaryOp{"not", inner}, p});
+        }
+        return parse_pipe();
+    }
+
+    NodePtr parse_and() { return parse_pipe(); }
 
     NodePtr parse_pipe() {
         NodePtr lhs = parse_comma();
