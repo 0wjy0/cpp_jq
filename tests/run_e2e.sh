@@ -28,7 +28,7 @@ run_positive() {
     [[ -f "$d/args" ]] && mapfile -t args < "$d/args"
     local out_file="$TMP/out.$name"
 
-    "$BIN" "${args[@]}" -f "$filter" "$input_file" >"$out_file" 2>"$TMP/err.$name"
+    "$BIN" "${args[@]}" -f "$filter" < "$input_file" >"$out_file" 2>"$TMP/err.$name"
     local code=$?
 
     if [[ -f "$expected_file" && ! -s "$expected_file" ]]; then
@@ -59,7 +59,7 @@ run_negative() {
 
     local filter="$d/filter.jq"
     [[ ! -f "$d/expected_exit" ]] && { echo "SKIP $name"; return; }
-    "$BIN" -f "$filter" "$input_file" >/dev/null 2>"$TMP/err.$name"
+    "$BIN" -f "$filter" < "$input_file" >/dev/null 2>"$TMP/err.$name"
     local code=$?
     local exp_exit; exp_exit="$(cat "$d/expected_exit")"
     local exp_sub;   exp_sub="$(cat "$d/expected_stderr_substr")"
