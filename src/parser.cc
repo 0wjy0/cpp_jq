@@ -230,7 +230,8 @@ NodePtr parse_cmp() {
             return std::make_shared<Node>(Node{Call{name, args}, p});
         }
         if (peek().kind == TokKind::IDENT) {
-            throw CppJqError(p, "unexpected identifier in expression: " + peek().text);
+            std::string name = eat().text;
+            return std::make_shared<Node>(Node{Call{name, {}}, p});
         }
         if (accept(TokKind::LPAREN)) {
             NodePtr inner = parse_expr();

@@ -1,5 +1,6 @@
 // cpp_jq - SPDX-License-Identifier: MIT
 #include "cpp_jq/ast.hpp"
+#include "builtin.hpp"
 #include <type_traits>
 #include <algorithm>
 #include <cmath>
@@ -172,7 +173,21 @@ void BinOp::eval(const J& in, Values& out) const {
 }
 
 void UnaryOp::eval(const J&, Values&) const { throw CppJqError({}, "UnaryOp: not implemented in Phase 2"); }
-void Call::eval(const J&, Values&) const { throw CppJqError({}, "Call: not implemented in Phase 2"); }
+
+void Call::eval(const J& in, Values& out) const {
+    auto& reg = builtin_registry();
+    auto it = reg.find(name);
+    if (it == reg.end()) throw CppJqError({}, "unknown function: " + name);
+    std::vector<J> pre_args;
+    for (auto& a : args) {
+        Values tmp = a->eval(J(nullptr));
+        if (tmp.size() != 1) throw CppJqError({}, "arg must produce single value");
+        pre_args.push_back(tmp[0]);
+    }
+    Values in_vals = { in };
+    BuiltinCtx ctx{ in_vals, pre_args };
+    it->second(ctx, out);
+}
 
 Values Node::eval(const J& in) const {
     Values out;

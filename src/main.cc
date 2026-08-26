@@ -11,6 +11,7 @@
 #include "parser.hpp"
 #include "printer.hpp"
 #include "diag.hpp"
+#include "builtin.hpp"
 
 using namespace cpp_jq;
 
@@ -56,6 +57,7 @@ int run(const std::string& filter_src, std::istream& input, bool compact) {
 }
 
 int main(int argc, char** argv) {
+    register_builtins();
     std::vector<std::string> args(argv+1, argv+argc);
     bool compact = false;
     std::string filter_file;

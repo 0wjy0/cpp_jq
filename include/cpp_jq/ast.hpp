@@ -25,7 +25,7 @@ struct ArrayCtor         { std::vector<std::shared_ptr<Node>> items; void eval(c
 struct ObjectCtor        { std::vector<std::pair<std::shared_ptr<Node>, std::shared_ptr<Node>>> pairs; void eval(const J&, Values&) const; };
 struct BinOp             { std::string op; std::shared_ptr<Node> lhs, rhs; void eval(const J&, Values&) const; };
 struct UnaryOp           { std::string op; std::shared_ptr<Node> inner; void eval(const J&, Values&) const; };
-struct Call              { std::string name; std::vector<std::shared_ptr<Node>> args; void eval(const J&, Values&) const; };
+struct Call              { std::string name; std::vector<std::shared_ptr<Node>> args; void eval(const J&, Values&) const; bool optional = false; };
 
 struct Node {
     std::variant<Identity, Literal, FieldAccess, Index, Iterate, Recurse,
