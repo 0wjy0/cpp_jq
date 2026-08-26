@@ -12,6 +12,7 @@ namespace cpp_jq {
 struct Node;
 
 struct Identity          { void eval(const J&, Values&) const; };
+struct Empty             { void eval(const J&, Values&) const; };
 struct Literal           { J value; void eval(const J&, Values&) const; };
 struct FieldAccess       { std::string name; bool optional = false; void eval(const J&, Values&) const; };
 struct Index             { int64_t idx = 0; bool has_end = false; int64_t end = 0; bool optional = false; void eval(const J&, Values&) const; };
@@ -28,7 +29,7 @@ struct UnaryOp           { std::string op; std::shared_ptr<Node> inner; void eva
 struct Call              { std::string name; std::vector<std::shared_ptr<Node>> args; void eval(const J&, Values&) const; bool optional = false; };
 
 struct Node {
-    std::variant<Identity, Literal, FieldAccess, Index, Iterate, Recurse,
+    std::variant<Identity, Empty, Literal, FieldAccess, Index, Iterate, Recurse,
                  Pipe, Comma, Group, IfElse, ArrayCtor, ObjectCtor,
                  BinOp, UnaryOp, Call> kind;
     Pos pos;

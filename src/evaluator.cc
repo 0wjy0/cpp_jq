@@ -18,6 +18,7 @@ static bool is_optional(const Node& n) {
 }
 
 void Identity::eval(const J& in, Values& out) const { out.push_back(in); }
+void Empty::eval(const J&, Values&) const {}
 void Literal::eval(const J&, Values& out) const { out.push_back(value); }
 
 void FieldAccess::eval(const J& in, Values& out) const {
@@ -114,7 +115,13 @@ void Group::eval(const J& in, Values& out) const {
 
 void IfElse::eval(const J& in, Values& out) const {
     Values c = cond->eval(in);
-    NodePtr branch = c.empty() ? else_br : then_br;
+    bool truthy = false;
+    for (auto& v : c) {
+        if (v.is_boolean()) { if (v.get<bool>()) truthy = true; }
+        else truthy = true;
+        break;
+    }
+    NodePtr branch = truthy ? then_br : else_br;
     Values tmp = branch->eval(in);
     for (auto& v : tmp) out.push_back(std::move(v));
 }

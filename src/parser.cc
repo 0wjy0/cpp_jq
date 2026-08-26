@@ -300,7 +300,7 @@ NodePtr parse_cmp() {
             NodePtr inner = parse_expr();
             expect(TokKind::RPAREN, ")");
             NodePtr t_node = std::make_shared<Node>(Node{Identity{}, p});
-            NodePtr e_node = std::make_shared<Node>(Node{ArrayCtor{{}}, p});
+            NodePtr e_node = std::make_shared<Node>(Node{Empty{}, p});
             return std::make_shared<Node>(Node{IfElse{inner, t_node, e_node}, p});
         }
         if (accept(TokKind::MINUS)) {
