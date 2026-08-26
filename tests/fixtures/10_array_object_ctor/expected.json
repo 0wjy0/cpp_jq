@@ -1,1 +1,4 @@
-{"age":30,"name":"bob"}
+{
+  "age": 30,
+  "name": "bob"
+}
