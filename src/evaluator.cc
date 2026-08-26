@@ -4,6 +4,7 @@
 #include <type_traits>
 #include <algorithm>
 #include <cmath>
+#include <climits>
 
 namespace cpp_jq {
 
@@ -48,7 +49,8 @@ void Index::eval(const J& in, Values& out) const {
         if (has_end) {
             int64_t s = idx, e = end;
             if (s < 0) s += n;
-            if (e < 0) e += n;
+            if (e == INT64_MAX) e = n;
+            else if (e < 0) e += n;
             if (s < 0) s = 0;
             if (e > n) e = n;
             J arr = J::array();

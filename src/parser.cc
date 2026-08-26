@@ -1,5 +1,6 @@
 // cpp_jq - SPDX-License-Identifier: MIT
 #include "parser.hpp"
+#include <climits>
 
 namespace cpp_jq {
 
@@ -209,19 +210,24 @@ NodePtr parse_cmp() {
 
     NodePtr parse_slice_expr() {
         Pos p = peek().pos;
-        const Tok& a = peek();
-        if (a.kind != TokKind::NUMBER) {
+        bool neg = false;
+        if (peek().kind == TokKind::MINUS) { neg = true; eat(); }
+        if (peek().kind != TokKind::NUMBER) {
             throw CppJqError(p, "expected number in [..]");
         }
         int64_t idx = static_cast<int64_t>(eat().num);
+        if (neg) idx = -idx;
         if (accept(TokKind::COLON)) {
             Index ix;
             ix.idx = idx;
             ix.has_end = true;
+            bool neg2 = false;
+            if (peek().kind == TokKind::MINUS) { neg2 = true; eat(); }
             if (peek().kind == TokKind::NUMBER) {
                 ix.end = static_cast<int64_t>(eat().num);
+                if (neg2) ix.end = -ix.end;
             } else {
-                ix.end = 0;
+                ix.end = INT64_MAX;
             }
             return std::make_shared<Node>(Node{ix, p});
         }

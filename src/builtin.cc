@@ -86,11 +86,20 @@ void type(const BuiltinCtx& c, Values& out) {
 
 void has(const BuiltinCtx& c, Values& out) {
     if (c.pre_args.empty()) throw CppJqError({}, "has: missing arg");
+    const J& a = c.pre_args[0];
     for (auto& v : c.in_vals) {
-        if (!v.is_object()) throw CppJqError({}, "has: not object");
-        const J& a = c.pre_args[0];
-        std::string key = a.is_string() ? a.get<std::string>() : a.dump();
-        out.push_back(v.contains(key));
+        if (v.is_object()) {
+            std::string key = a.is_string() ? a.get<std::string>() : a.dump();
+            out.push_back(v.contains(key));
+        } else if (v.is_array()) {
+            if (!a.is_number()) { out.push_back(false); continue; }
+            int64_t i = static_cast<int64_t>(a.get<double>());
+            int64_t n = static_cast<int64_t>(v.size());
+            if (i < 0) i += n;
+            out.push_back(i >= 0 && i < n);
+        } else {
+            out.push_back(false);
+        }
     }
 }
 
@@ -222,7 +231,10 @@ void group_by(const BuiltinCtx& c, Values& out) {
 }
 
 void tostring(const BuiltinCtx& c, Values& out) {
-    for (auto& v : c.in_vals) out.push_back(v.dump());
+    for (auto& v : c.in_vals) {
+        if (v.is_string()) out.push_back(v.get<std::string>());
+        else out.push_back(v.dump());
+    }
 }
 
 void tonumber(const BuiltinCtx& c, Values& out) {
