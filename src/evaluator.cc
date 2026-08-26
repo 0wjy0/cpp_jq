@@ -49,7 +49,9 @@ void Index::eval(const J& in, Values& out) const {
             if (e < 0) e += n;
             if (s < 0) s = 0;
             if (e > n) e = n;
-            for (int64_t k = s; k < e; ++k) out.push_back(in[k]);
+            J arr = J::array();
+            for (int64_t k = s; k < e; ++k) arr.push_back(in[k]);
+            out.push_back(arr);
             return;
         }
         out.push_back(get(idx));
@@ -140,7 +142,36 @@ void ObjectCtor::eval(const J&, Values& out) const {
     out.push_back(obj);
 }
 
-void BinOp::eval(const J&, Values&) const { throw CppJqError({}, "BinOp: not implemented in Phase 2"); }
+void BinOp::eval(const J& in, Values& out) const {
+    Values a = lhs->eval(in);
+    Values b = rhs->eval(in);
+    if (a.size() != 1 || b.size() != 1) throw CppJqError({}, "binary op: not single");
+    const J& x = a[0];
+    const J& y = b[0];
+    if (op == "==" || op == "!=" || op == "<" || op == "<=" || op == ">" || op == ">=") {
+        bool eq = (x == y);
+        if (op == "==") { out.push_back(eq); return; }
+        if (op == "!=") { out.push_back(!eq); return; }
+        int c = 0;
+        if (x.is_number() && y.is_number()) {
+            double xd = x.get<double>(), yd = y.get<double>();
+            c = (xd < yd) - (xd > yd);
+        } else if (x.is_string() && y.is_string()) {
+            std::string xs = x.get<std::string>();
+            std::string ys = y.get<std::string>();
+            c = (xs < ys) - (xs > ys);
+        } else {
+            throw CppJqError({}, "comparison: type mismatch");
+        }
+        if      (op == "<")  out.push_back(c < 0);
+        else if (op == "<=") out.push_back(c <= 0);
+        else if (op == ">")  out.push_back(c > 0);
+        else if (op == ">=") out.push_back(c >= 0);
+        return;
+    }
+    throw CppJqError({}, "BinOp: arithmetic not implemented in Phase 2");
+}
+
 void UnaryOp::eval(const J&, Values&) const { throw CppJqError({}, "UnaryOp: not implemented in Phase 2"); }
 void Call::eval(const J&, Values&) const { throw CppJqError({}, "Call: not implemented in Phase 2"); }
 

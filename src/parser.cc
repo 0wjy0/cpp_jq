@@ -17,35 +17,26 @@ struct Parser {
         return eat();
     }
 
-    // expression layers (lowest to highest):
-    // expr      := and_expr
-    // and_expr  := cmp_expr ( ('and' | 'or') and_expr )?
-    // cmp_expr  := pipe_expr
-    // pipe_expr := comma_expr ( '|' pipe_expr )?
-    // comma_expr:= path ( ',' comma_expr )?
-    // path      := ('..')? ('.' (NAME | '[' slice ']') [ '?' ]?)? ('[' slice ']' [ '?' ]?)* ('[]' [ '?' ]?)? term
-    //            | term
-    // term      := unary ( primary )*
-    // primary   := NUMBER | STRING | TRUE | FALSE | NULL_T
-    //            | IDENT '(' arglist? ')'
-    //            | NAME                  (only when no '(' follows, used in object literal)
-    //            | '(' expr ')'
-    //            | '[' ( expr (',' expr)* )? ']'
-    //            | '{' ( pair (',' pair)* )? '}'
-    //            | 'if' expr 'then' expr 'else' expr 'end'
-    //            | 'select' '(' expr ')'
-    //            | '-' primary
-    //            | 'not' primary
+    NodePtr parse_expr() { return parse_cmp(); }
 
-    NodePtr parse_expr() { return parse_and(); }
+NodePtr parse_cmp() {
+    NodePtr lhs = parse_and();
+    while (peek().kind == TokKind::EQ || peek().kind == TokKind::NEQ
+           || peek().kind == TokKind::LT || peek().kind == TokKind::LE
+           || peek().kind == TokKind::GT || peek().kind == TokKind::GE) {
+        std::string op = eat().text;
+        NodePtr rhs = parse_and();
+        Pos p = lhs->pos;
+        lhs = std::make_shared<Node>(Node{BinOp{op, lhs, rhs}, p});
+    }
+    return lhs;
+}
 
     NodePtr parse_and() {
         NodePtr lhs = parse_pipe();
         while (peek().kind == TokKind::AND || peek().kind == TokKind::OR) {
             TokKind k = peek().kind; eat();
             NodePtr rhs = parse_pipe();
-            // a and b => if a then b else false end
-            // a or  b => if a then true else b end
             Pos p = lhs->pos;
             NodePtr cond = lhs;
             NodePtr t_node;
@@ -82,7 +73,6 @@ struct Parser {
 
     NodePtr parse_path() {
         Pos p = peek().pos;
-        // Recurse: ..
         if (peek().kind == TokKind::DOT && peek2().kind == TokKind::DOT) {
             eat(); eat();
             NodePtr inner = parse_path();
@@ -90,15 +80,20 @@ struct Parser {
         }
         NodePtr base;
         if (accept(TokKind::DOT)) {
-            // .a or .[]
-            if (peek().kind == TokKind::LBRACKET) {
+            if (peek().kind == TokKind::LBRACKET && peek2().kind == TokKind::RBRACKET) {
+                eat(); eat();
+                Iterate it;
+                base = std::make_shared<Node>(Node{it, p});
+            } else if (peek().kind == TokKind::LBRACKET) {
                 eat();
-                // .[idx] or .[s:e] or .[]
-                NodePtr n = parse_slice_expr();
+                NodePtr s = parse_slice_expr();
                 expect(TokKind::RBRACKET, "]");
-                base = n;
+                bool opt = false;
+                if (accept(TokKind::QUESTION)) opt = true;
+                Index ix = std::get<Index>(s->kind);
+                ix.optional = opt;
+                base = std::make_shared<Node>(Node{ix, p});
             } else if (peek().kind == TokKind::RBRACKET) {
-                // .[]
                 eat();
                 Iterate it;
                 base = std::make_shared<Node>(Node{it, p});
@@ -107,42 +102,68 @@ struct Parser {
                 FieldAccess fa{name, false};
                 base = std::make_shared<Node>(Node{fa, p});
             } else {
-                // bare .
                 base = std::make_shared<Node>(Node{Identity{}, p});
             }
         } else {
             base = parse_term();
         }
 
-        // postfix [ ... ]? and []?
+        auto wrap = [&](NodePtr new_access) -> NodePtr {
+            return std::make_shared<Node>(Node{Pipe{base, new_access}, base->pos});
+        };
+
         while (true) {
+            if (peek().kind == TokKind::DOT && peek2().kind != TokKind::DOT) {
+                eat();
+                NodePtr new_access;
+                if (peek().kind == TokKind::LBRACKET && peek2().kind == TokKind::RBRACKET) {
+                    eat(); eat();
+                    Iterate it;
+                    new_access = std::make_shared<Node>(Node{it, base->pos});
+                } else if (peek().kind == TokKind::LBRACKET) {
+                    eat();
+                    NodePtr s = parse_slice_expr();
+                    expect(TokKind::RBRACKET, "]");
+                    bool opt = false;
+                    if (accept(TokKind::QUESTION)) opt = true;
+                    Index ix = std::get<Index>(s->kind);
+                    ix.optional = opt;
+                    new_access = std::make_shared<Node>(Node{ix, base->pos});
+                } else if (peek().kind == TokKind::RBRACKET) {
+                    eat();
+                    Iterate it;
+                    new_access = std::make_shared<Node>(Node{it, base->pos});
+                } else if (peek().kind == TokKind::IDENT) {
+                    std::string name = eat().text;
+                    FieldAccess fa{name, false};
+                    new_access = std::make_shared<Node>(Node{fa, base->pos});
+                } else {
+                    throw CppJqError(peek().pos, "expected field name or [ after .");
+                }
+                base = wrap(new_access);
+                continue;
+            }
+            if (peek().kind == TokKind::LBRACKET && peek2().kind == TokKind::RBRACKET) {
+                eat(); eat();
+                bool opt = false;
+                if (accept(TokKind::QUESTION)) opt = true;
+                Iterate it;
+                it.optional = opt;
+                NodePtr new_access = std::make_shared<Node>(Node{it, base->pos});
+                base = wrap(new_access);
+                continue;
+            }
             if (peek().kind == TokKind::LBRACKET) {
                 eat();
                 NodePtr s = parse_slice_expr();
                 expect(TokKind::RBRACKET, "]");
-                Index* ix = std::get_if<Index>(&base->kind);
-                if (ix) {
-                    // shouldn't happen since we build fresh nodes here, but keep
-                    ix->optional = false;
-                } else {
-                    // wrap as Index expr-like using slice expression result is non-trivial.
-                    // For MVP we only support integer/slice literals in [..], which parser produces
-                    // as a Literal/Index node already via parse_slice_expr.
-                }
                 bool opt = false;
                 if (accept(TokKind::QUESTION)) opt = true;
-                // If s is a Literal number, build Index; otherwise treat as path
-                // For MVP simplicity, Index only takes integer idx/end.
-                if (auto* lit = std::get_if<Literal>(&s->kind)) {
-                    if (lit->value.is_number_integer()) {
-                        Index ix_node;
-                        ix_node.idx = lit->value.get<int64_t>();
-                        ix_node.optional = opt;
-                        base = std::make_shared<Node>(Node{ix_node, p});
-                        continue;
-                    }
-                }
-                throw CppJqError(p, "non-literal index not supported in MVP");
+                Index ix = std::get<Index>(s->kind);
+                ix.optional = opt;
+                NodePtr new_access = std::make_shared<Node>(Node{ix, base->pos});
+                base = wrap(new_access);
+                continue;
             }
             if (peek().kind == TokKind::RBRACKET) {
                 eat();
@@ -150,7 +171,8 @@ struct Parser {
                 if (accept(TokKind::QUESTION)) opt = true;
                 Iterate it;
                 it.optional = opt;
-                base = std::make_shared<Node>(Node{it, p});
+                NodePtr new_access = std::make_shared<Node>(Node{it, base->pos});
+                base = wrap(new_access);
                 continue;
             }
             if (peek().kind == TokKind::QUESTION) {
@@ -166,7 +188,6 @@ struct Parser {
         return base;
     }
 
-    // slice expression: NUMBER | NUMBER ':' NUMBER | NUMBER ':'
     NodePtr parse_slice_expr() {
         Pos p = peek().pos;
         const Tok& a = peek();
@@ -190,10 +211,7 @@ struct Parser {
         return std::make_shared<Node>(Node{ix, p});
     }
 
-    NodePtr parse_term() {
-        // postfix calls? .foo | map(f) etc. MVP: function calls only via primary IDENT '(' ... ')'
-        return parse_primary();
-    }
+    NodePtr parse_term() { return parse_primary(); }
 
     NodePtr parse_primary() {
         Pos p = peek().pos;
@@ -222,13 +240,7 @@ struct Parser {
             return std::make_shared<Node>(Node{Call{name, args}, p});
         }
         if (peek().kind == TokKind::IDENT) {
-            // bare NAME used in object-literal context (parser caller decides)
-            // For top-level, treat as FieldAccess on implicit current — unsupported.
-            // But the user might write { name: "bob" } where 'name' is bare.
-            // We accept here and let caller decide; build FieldAccess for now.
-            std::string name = eat().text;
-            FieldAccess fa{name, false};
-            return std::make_shared<Node>(Node{fa, p});
+            throw CppJqError(p, "unexpected identifier in expression: " + peek().text);
         }
         if (accept(TokKind::LPAREN)) {
             NodePtr inner = parse_expr();
@@ -267,7 +279,6 @@ struct Parser {
             expect(TokKind::LPAREN, "(");
             NodePtr inner = parse_expr();
             expect(TokKind::RPAREN, ")");
-            // select(cond) => if cond then . else empty end
             NodePtr t_node = std::make_shared<Node>(Node{Identity{}, p});
             NodePtr e_node = std::make_shared<Node>(Node{ArrayCtor{{}}, p});
             return std::make_shared<Node>(Node{IfElse{inner, t_node, e_node}, p});
@@ -286,11 +297,7 @@ struct Parser {
     std::pair<NodePtr, NodePtr> parse_pair() {
         Pos p = peek().pos;
         NodePtr k;
-        // pair key can be bare IDENT or STRING
-        if (peek().kind == TokKind::IDENT && peek2().kind != TokKind::COLON) {
-            std::string name = eat().text;
-            k = std::make_shared<Node>(Node{Literal{J(name)}, p});
-        } else if (peek().kind == TokKind::IDENT) {
+        if (peek().kind == TokKind::IDENT && peek2().kind == TokKind::COLON) {
             std::string name = eat().text;
             k = std::make_shared<Node>(Node{Literal{J(name)}, p});
         } else if (peek().kind == TokKind::STRING) {
@@ -300,12 +307,9 @@ struct Parser {
             k = parse_primary();
         }
         expect(TokKind::COLON, ":");
-        NodePtr v = parse_expr();
+        NodePtr v = parse_path();
         return {k, v};
     }
-
-    // helper: peek without eating (kept for symmetry; not currently used)
-    const Tok& peek_save() const { return peek(); }
 };
 
 NodePtr parse(const std::vector<Tok>& toks) {
