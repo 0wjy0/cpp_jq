@@ -1,0 +1,9 @@
+build/
+*.o
+*.d
+*.gcno
+*.gcda
+.cache/
+compile_commands.json
+.vscode/
+.worktrees/
