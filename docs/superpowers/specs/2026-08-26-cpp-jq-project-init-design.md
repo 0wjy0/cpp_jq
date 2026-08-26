@@ -128,7 +128,13 @@ Node = Identity
 ## 6. 数据流
 
 ```
-stdin/file → read全部 → split为多JSON值（流式简化：先全部读入，ndjson 按换行切分）
+stdin/file → 读取为字符串
+         ↓
+逐个 JSON 值流式解析（使用 nlohmann::json 的 SAX 解析器或
+  json::parse 的 iterator 推进，逐次产出完整 JSON 值）。
+  支持两种输入形态：
+    - 单个 JSON 值（任意缩进/空白）。
+    - NDJSON：每个非空行包含一个 JSON 值。
          ↓
 lexer.lex(filter_str) → tokens
          ↓
