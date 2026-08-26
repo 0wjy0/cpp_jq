@@ -119,20 +119,20 @@ void IfElse::eval(const J& in, Values& out) const {
     for (auto& v : tmp) out.push_back(std::move(v));
 }
 
-void ArrayCtor::eval(const J&, Values& out) const {
+void ArrayCtor::eval(const J& in, Values& out) const {
     J arr = J::array();
     for (auto& it : items) {
-        Values tmp = it->eval(J(nullptr));
+        Values tmp = it->eval(in);
         for (auto& v : tmp) arr.push_back(v);
     }
     out.push_back(arr);
 }
 
-void ObjectCtor::eval(const J&, Values& out) const {
+void ObjectCtor::eval(const J& in, Values& out) const {
     J obj = J::object();
     for (auto& [k, v] : pairs) {
-        Values kt = k->eval(J(nullptr));
-        Values vt = v->eval(J(nullptr));
+        Values kt = k->eval(in);
+        Values vt = v->eval(in);
         if (kt.size() != 1) throw CppJqError({}, "object key must be single");
         std::string key = kt[0].is_string()
             ? kt[0].get<std::string>()

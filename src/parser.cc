@@ -100,9 +100,19 @@ NodePtr parse_cmp() {
 
     NodePtr parse_path() {
         Pos p = peek().pos;
-        if (peek().kind == TokKind::DOT && peek2().kind == TokKind::DOT) {
-            eat(); eat();
-            NodePtr inner = parse_path();
+        if (peek().kind == TokKind::RECURSE) {
+            eat();
+            NodePtr inner;
+            if (peek().kind == TokKind::EOF_T || peek().kind == TokKind::PIPE
+                || peek().kind == TokKind::RPAREN || peek().kind == TokKind::RBRACKET
+                || peek().kind == TokKind::COMMA || peek().kind == TokKind::AND
+                || peek().kind == TokKind::OR || peek().kind == TokKind::THEN
+                || peek().kind == TokKind::ELSE || peek().kind == TokKind::QUESTION
+                || peek().kind == TokKind::COLON || peek().kind == TokKind::RBRACE) {
+                inner = std::make_shared<Node>(Node{Identity{}, p});
+            } else {
+                inner = parse_path();
+            }
             return std::make_shared<Node>(Node{Recurse{inner}, p});
         }
         NodePtr base;
@@ -120,10 +130,6 @@ NodePtr parse_cmp() {
                 Index ix = std::get<Index>(s->kind);
                 ix.optional = opt;
                 base = std::make_shared<Node>(Node{ix, p});
-            } else if (peek().kind == TokKind::RBRACKET) {
-                eat();
-                Iterate it;
-                base = std::make_shared<Node>(Node{it, p});
             } else if (peek().kind == TokKind::IDENT) {
                 std::string name = eat().text;
                 FieldAccess fa{name, false};
@@ -140,7 +146,7 @@ NodePtr parse_cmp() {
         };
 
         while (true) {
-            if (peek().kind == TokKind::DOT && peek2().kind != TokKind::DOT) {
+            if (peek().kind == TokKind::DOT) {
                 eat();
                 NodePtr new_access;
                 if (peek().kind == TokKind::LBRACKET && peek2().kind == TokKind::RBRACKET) {
@@ -156,10 +162,6 @@ NodePtr parse_cmp() {
                     Index ix = std::get<Index>(s->kind);
                     ix.optional = opt;
                     new_access = std::make_shared<Node>(Node{ix, base->pos});
-                } else if (peek().kind == TokKind::RBRACKET) {
-                    eat();
-                    Iterate it;
-                    new_access = std::make_shared<Node>(Node{it, base->pos});
                 } else if (peek().kind == TokKind::IDENT) {
                     std::string name = eat().text;
                     FieldAccess fa{name, false};

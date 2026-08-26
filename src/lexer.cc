@@ -42,7 +42,7 @@ std::vector<Tok> lex(const std::string& src) {
         Pos start = p;
         if (c == '.') {
             if (i_cur + 1 < src.size() && src[i_cur + 1] == '.') {
-                Tok t{TokKind::DOT, "..", 0, start};
+                Tok t{TokKind::RECURSE, "..", 0, start};
                 toks.push_back(t);
                 bump(2);
                 continue;
