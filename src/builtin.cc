@@ -48,6 +48,7 @@ void register_builtins() {
     r["group_by"]  = &builtins::group_by;
     r["tostring"]  = &builtins::tostring;
     r["tonumber"]  = &builtins::tonumber;
+    r["tojson"]    = &builtins::tostring;
 }
 
 std::unordered_map<std::string, BuiltinFn>& builtin_registry() { return registry(); }

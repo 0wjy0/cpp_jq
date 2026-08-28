@@ -52,7 +52,7 @@ cpp_jq --help
 
 ## Builtins
 
-`length keys type has contains in map add min max sort unique group_by tostring tonumber`
+`length keys type has contains in map add min max sort unique group_by tostring tonumber tojson`
 
 ## Tests
 
