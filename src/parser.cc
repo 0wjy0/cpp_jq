@@ -200,7 +200,8 @@ NodePtr parse_cmp() {
                 if (auto* fa = std::get_if<FieldAccess>(&base->kind)) fa->optional = true;
                 else if (auto* ix = std::get_if<Index>(&base->kind)) ix->optional = true;
                 else if (auto* it = std::get_if<Iterate>(&base->kind)) it->optional = true;
-                else throw CppJqError(peek().pos, "? must follow field/index/iterate");
+                else if (auto* cl = std::get_if<Call>(&base->kind)) cl->optional = true;
+                else throw CppJqError(peek().pos, "? must follow field/index/iterate/call");
                 continue;
             }
             break;

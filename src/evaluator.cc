@@ -14,6 +14,7 @@ static bool is_optional(const Node& n) {
         if constexpr (std::is_same_v<T, FieldAccess>) return k.optional;
         else if constexpr (std::is_same_v<T, Index>)  return k.optional;
         else if constexpr (std::is_same_v<T, Iterate>) return k.optional;
+        else if constexpr (std::is_same_v<T, Call>)    return k.optional;
         else return false;
     }, n.kind);
 }

@@ -22,6 +22,7 @@ void unique(const BuiltinCtx&, Values&);
 void group_by(const BuiltinCtx&, Values&);
 void tostring(const BuiltinCtx&, Values&);
 void tonumber(const BuiltinCtx&, Values&);
+void fromjson(const BuiltinCtx&, Values&);
 }
 
 namespace {
@@ -48,6 +49,7 @@ void register_builtins() {
     r["group_by"]  = &builtins::group_by;
     r["tostring"]  = &builtins::tostring;
     r["tonumber"]  = &builtins::tonumber;
+    r["fromjson"]  = &builtins::fromjson;
 }
 
 std::unordered_map<std::string, BuiltinFn>& builtin_registry() { return registry(); }
@@ -245,6 +247,17 @@ void tonumber(const BuiltinCtx& c, Values& out) {
             catch (...) { throw CppJqError({}, "tonumber: invalid string"); }
         }
         throw CppJqError({}, "tonumber: invalid type");
+    }
+}
+
+void fromjson(const BuiltinCtx& c, Values& out) {
+    for (auto& v : c.in_vals) {
+        if (!v.is_string()) throw CppJqError({}, "fromjson: not string");
+        try {
+            out.push_back(J::parse(v.get<std::string>()));
+        } catch (const nlohmann::json::parse_error&) {
+            throw CppJqError({}, "fromjson: invalid json");
+        }
     }
 }
 

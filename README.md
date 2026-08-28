@@ -52,7 +52,7 @@ cpp_jq --help
 
 ## Builtins
 
-`length keys type has contains in map add min max sort unique group_by tostring tonumber`
+`length keys type has contains in map add min max sort unique group_by tostring tonumber fromjson`
 
 ## Tests
 
@@ -60,7 +60,7 @@ cpp_jq --help
 make test
 ```
 
-34 end-to-end fixtures under `tests/fixtures/`, including positive cases and negative
+42 end-to-end fixtures under `tests/fixtures/`, including positive cases and negative
 cases that assert specific exit codes and stderr substrings.
 
 ## Architecture
@@ -68,7 +68,7 @@ cases that assert specific exit codes and stderr substrings.
 - `src/lexer.cc` -- hand-written tokenizer
 - `src/parser.cc` -- recursive-descent parser -> std::variant AST
 - `src/evaluator.cc` -- tree-walking evaluator
-- `src/builtin.cc` -- 15 builtins registered in a function map
+- `src/builtin.cc` -- 16 builtins registered in a function map
 - `src/printer.cc` -- pretty/compact JSON output
 - `src/diag.cc` -- stderr diagnostic with position
 - `src/main.cc` -- CLI driver (NDJSON stdin, NDJSON file, filter from arg or `-f FILE`)
