@@ -71,6 +71,29 @@ run_negative() {
     fi
 }
 
+verify_static_link() {
+    if ! command -v ldd >/dev/null 2>&1; then
+        echo "WARN ldd not available; skipping static-link verification"
+        return 0
+    fi
+    local bad=()
+    local so
+    while IFS= read -r so; do
+        case "$so" in
+            *libstdc++.so.6*|*libgcc_s.so.1*) bad+=("$so") ;;
+        esac
+    done < <(ldd "$BIN" 2>/dev/null | awk 'NF>=1 {print $1}')
+    if [[ ${#bad[@]} -gt 0 ]]; then
+        echo "FAIL static-link (still dynamic): ${bad[*]}"
+        FAIL=$((FAIL+1))
+    else
+        echo "PASS static-link (libstdc++/libgcc not in ldd output)"
+        PASS=$((PASS+1))
+    fi
+}
+
+verify_static_link
+
 for d in "$FIXTURES"/*/; do
     [[ -d "$d" ]] || continue
     n="$(basename "$d")"

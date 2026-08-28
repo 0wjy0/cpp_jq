@@ -13,6 +13,12 @@ make clean
 make test       # run all e2e fixtures
 ```
 
+## Linkage
+
+C++ runtime is statically linked. The resulting binary depends dynamically only on
+glibc and libm (Linux built-in), not on `libstdc++.so.6` or `libgcc_s.so.1`.
+Verify with `ldd build/cpp_jq`.
+
 ## Usage
 
 ```bash
