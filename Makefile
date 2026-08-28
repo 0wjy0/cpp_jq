@@ -3,6 +3,7 @@ CXX      ?= g++
 CXXSTD   ?= -std=c++17
 WARN     ?= -Wall -Wextra -Wpedantic
 OPT      ?= -g -O0
+LDFLAGS  ?= -static-libstdc++ -static-libgcc
 INCLUDES  = -Iinclude -Ithird_party
 
 SRCS = src/main.cc src/lexer.cc src/parser.cc src/evaluator.cc \
@@ -19,7 +20,7 @@ build: $(BIN)
 
 $(BIN): $(OBJS)
 	@mkdir -p build
-	$(CXX) $(CXXSTD) $(WARN) $(OPT) $^ -o $@
+	$(CXX) $(CXXSTD) $(WARN) $(OPT) $(LDFLAGS) $^ -o $@
 
 build/%.o: src/%.cc
 	@mkdir -p build
