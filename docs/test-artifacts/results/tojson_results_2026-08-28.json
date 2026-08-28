@@ -1,0 +1,43 @@
+{
+  "test_run_date": "2026-08-28",
+  "feature": "tojson",
+  "issue": "#5",
+  "binary": "build/cpp_jq",
+  "total": 20,
+  "passed": 20,
+  "failed": 0,
+  "pass_rate": "100%",
+  "test_cases": [
+    {"id": "TC-01", "title": "tojson number integer", "input": "42", "filter": "tojson", "expected": "\"42\"", "status": "PASS"},
+    {"id": "TC-02", "title": "tojson number float", "input": "3.14", "filter": "tojson", "expected": "\"3.14\"", "status": "PASS"},
+    {"id": "TC-03", "title": "tojson boolean true", "input": "true", "filter": "tojson", "expected": "\"true\"", "status": "PASS"},
+    {"id": "TC-04", "title": "tojson boolean false", "input": "false", "filter": "tojson", "expected": "\"false\"", "status": "PASS"},
+    {"id": "TC-05", "title": "tojson null", "input": "null", "filter": "tojson", "expected": "\"null\"", "status": "PASS"},
+    {"id": "TC-06", "title": "tojson string simple", "input": "\"hello\"", "filter": "tojson", "expected": "\"hello\"", "status": "PASS"},
+    {"id": "TC-07", "title": "tojson string with quotes", "input": "\"hi\"", "filter": "tojson", "expected": "\"hi\"", "status": "PASS"},
+    {"id": "TC-08", "title": "tojson array", "input": "[1,2]", "filter": "tojson", "expected": "\"[1,2]\"", "status": "PASS"},
+    {"id": "TC-09", "title": "tojson object mixed (sorted keys)", "input": "{\"name\":\"Bob\",...}", "filter": ".|tojson", "expected": "{\"age\":7,\"name\":\"Bob\",...}", "status": "PASS", "note": "nlohmann::json sorts keys alphabetically during dump"},
+    {"id": "TC-10", "title": "tojson pipe field", "input": "{\"a\":1,\"b\":2}", "filter": ".b|tojson", "expected": "\"2\"", "status": "PASS"},
+    {"id": "TC-11", "title": "tojson identity pipe", "input": "{\"a\":1}", "filter": ".|tojson", "expected": "\"{\\\"a\\\":1}\"", "status": "PASS"},
+    {"id": "TC-12", "title": "tojson ndjson stream", "input": "1\\n2\\n3", "filter": "tojson", "expected": "3 lines", "status": "PASS"},
+    {"id": "TC-13", "title": "tojson empty array", "input": "[]", "filter": "tojson", "expected": "\"[]\"", "status": "PASS"},
+    {"id": "TC-14", "title": "tojson empty object", "input": "{}", "filter": "tojson", "expected": "\"{}\"", "status": "PASS"},
+    {"id": "TC-15", "title": "tojson nested array", "input": "[[1,2],[3,4]]", "filter": "tojson", "expected": "\"[[1,2],[3,4]]\"", "status": "PASS"},
+    {"id": "TC-16", "title": "tojson negative number", "input": "-5", "filter": "tojson", "expected": "\"-5\"", "status": "PASS"},
+    {"id": "TC-17", "title": "tojson unicode string", "input": "\"héllo\"", "filter": "tojson", "expected": "\"héllo\"", "status": "PASS"},
+    {"id": "TC-18", "title": "tojson string with backslash", "input": "\"a\\\\b\"", "filter": "tojson", "expected": "\"a\\\\b\"", "status": "PASS"},
+    {"id": "TC-19", "title": "tojson vs tostring parity string", "input": "\"hello\"", "filter": "tojson vs tostring", "expected": "identical", "status": "PASS"},
+    {"id": "TC-20", "title": "tojson vs tostring parity number", "input": "42", "filter": "tojson vs tostring", "expected": "identical", "status": "PASS"}
+  ],
+  "cli_acceptance": [
+    {"criterion": "echo '\"hi\"' | cpp_jq tojson -> \"hi\"", "result": "PASS", "actual": "\"hi\""},
+    {"criterion": "echo '1' | cpp_jq tojson -> \"1\"", "result": "PASS", "actual": "\"1\""},
+    {"criterion": "echo '[1,2]' | cpp_jq tojson -> \"[1,2]\"", "result": "PASS", "actual": "\"[1,2]\""},
+    {"criterion": "README.md contains tojson", "result": "PASS", "actual": "grep -c tojson README.md = 1"}
+  ],
+  "e2e_fixtures": [
+    {"fixture": "39_tojson", "status": "PASS"},
+    {"fixture": "40_tojson_string", "status": "PASS"}
+  ],
+  "make_test_summary": "PASS=39 FAIL=0"
+}
