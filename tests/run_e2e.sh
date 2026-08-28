@@ -82,12 +82,13 @@ verify_static_link() {
         case "$so" in
             *libstdc++.so.6*|*libgcc_s.so.1*) bad+=("$so") ;;
         esac
-    done < <(ldd "$BIN" 2>/dev/null | awk '/=> \// {print $1; next} /^\// {print $1}')
+    done < <(ldd "$BIN" 2>/dev/null | awk 'NF>=1 {print $1}')
     if [[ ${#bad[@]} -gt 0 ]]; then
         echo "FAIL static-link (still dynamic): ${bad[*]}"
         FAIL=$((FAIL+1))
     else
         echo "PASS static-link (libstdc++/libgcc not in ldd output)"
+        PASS=$((PASS+1))
     fi
 }
 
